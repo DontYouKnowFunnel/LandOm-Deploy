@@ -9,7 +9,7 @@ else
   COMPOSE_FILE="docker-compose.dev.yml"
 fi
 
-./scripts/render_env.sh "$TARGET_ENV"
+./scripts/env.sh "$TARGET_ENV"
 
 docker compose \
   --env-file .env.runtime \
