@@ -1,0 +1,48 @@
+services:
+  frontend:
+    image: ghcr.io/dontyouknowfunnel/landom-frontend:${FRONTEND_TAG}
+    restart: always
+    ports:
+      - "${PORT_FRONTEND}:80"
+    networks:
+      - landom-net
+
+  backend:
+    image: ghcr.io/dontyouknowfunnel/landom-backend:${BACKEND_TAG}
+    restart: always
+    env_file:
+      - .env.runtime
+    ports:
+      - "${PORT_BACKEND}:8080"
+    depends_on:
+      - mysql
+      - clickhouse
+    networks:
+      - landom-net
+
+  mysql:
+    image: mysql:8.4
+    restart: always
+    env_file:
+      - .env.runtime
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - landom-net
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24
+    restart: always
+    env_file:
+      - .env.runtime
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    networks:
+      - landom-net
+
+networks:
+  landom-net:
+
+volumes:
+  mysql-data:
+  clickhouse-data:
