@@ -1,0 +1,155 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "tags/dev.versions"
+      - "tags/prod.versions"
+      - "docker-compose.yml"
+      - "docker-compose.dev.yml"
+      - "docker-compose.prod.yml"
+      - "scripts/**"
+
+concurrency:
+  group: landom-deploy-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      dev: ${{ steps.filter.outputs.dev }}
+      prod: ${{ steps.filter.outputs.prod }}
+    steps:
+      - name: Checkout deploy repo
+        uses: actions/checkout@v4
+
+      - name: Detect changed files
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            dev:
+              - 'tags/dev.versions'
+              - 'docker-compose.yml'
+              - 'docker-compose.dev.yml'
+              - 'scripts/**'
+            prod:
+              - 'tags/prod.versions'
+              - 'docker-compose.yml'
+              - 'docker-compose.prod.yml'
+              - 'scripts/**'
+
+  deploy-dev:
+    needs: changes
+    if: needs.changes.outputs.dev == 'true'
+    runs-on: ubuntu-latest
+    environment: dev
+
+    steps:
+      - name: Checkout deploy repo
+        uses: actions/checkout@v4
+
+      - name: Copy files to dev server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          source: "."
+          target: "/opt/landom-deploy"
+
+      - name: Deploy on dev server
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          PORT_FRONTEND: ${{ secrets.PORT_FRONTEND }}
+          PORT_BACKEND: ${{ secrets.PORT_BACKEND }}
+          PORT_AI: ${{ secrets.PORT_AI }}
+
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+
+          CLICKHOUSE_DB: ${{ secrets.CLICKHOUSE_DB }}
+          CLICKHOUSE_USER: ${{ secrets.CLICKHOUSE_USER }}
+          CLICKHOUSE_PASSWORD: ${{ secrets.CLICKHOUSE_PASSWORD }}
+
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+          SPRING_DATASOURCE_URL: ${{ secrets.SPRING_DATASOURCE_URL }}
+          SPRING_DATASOURCE_USERNAME: ${{ secrets.SPRING_DATASOURCE_USERNAME }}
+          SPRING_DATASOURCE_PASSWORD: ${{ secrets.SPRING_DATASOURCE_PASSWORD }}
+
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+          GHCR_READ_PAT: ${{ secrets.GHCR_READ_PAT }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          envs: PORT_FRONTEND,PORT_BACKEND,PORT_AI,MYSQL_ROOT_PASSWORD,MYSQL_DATABASE,MYSQL_USER,MYSQL_PASSWORD,CLICKHOUSE_DB,CLICKHOUSE_USER,CLICKHOUSE_PASSWORD,JWT_SECRET,SPRING_DATASOURCE_URL,SPRING_DATASOURCE_USERNAME,SPRING_DATASOURCE_PASSWORD,GHCR_USERNAME,GHCR_READ_PAT
+          script: |
+            cd /opt/landom-deploy
+            echo "$GHCR_READ_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+            chmod +x scripts/env.sh scripts/deploy.sh
+            ./scripts/deploy.sh dev
+
+  deploy-prod:
+    needs: changes
+    if: needs.changes.outputs.prod == 'true'
+    runs-on: ubuntu-latest
+    environment: prod
+
+    steps:
+      - name: Checkout deploy repo
+        uses: actions/checkout@v4
+
+      - name: Copy files to prod server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          source: "."
+          target: "/opt/landom-deploy"
+
+      - name: Deploy on prod server
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          PORT_FRONTEND: ${{ secrets.PORT_FRONTEND }}
+          PORT_BACKEND: ${{ secrets.PORT_BACKEND }}
+          PORT_AI: ${{ secrets.PORT_AI }}
+
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+
+          CLICKHOUSE_DB: ${{ secrets.CLICKHOUSE_DB }}
+          CLICKHOUSE_USER: ${{ secrets.CLICKHOUSE_USER }}
+          CLICKHOUSE_PASSWORD: ${{ secrets.CLICKHOUSE_PASSWORD }}
+
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+          SPRING_DATASOURCE_URL: ${{ secrets.SPRING_DATASOURCE_URL }}
+          SPRING_DATASOURCE_USERNAME: ${{ secrets.SPRING_DATASOURCE_USERNAME }}
+          SPRING_DATASOURCE_PASSWORD: ${{ secrets.SPRING_DATASOURCE_PASSWORD }}
+
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+          GHCR_READ_PAT: ${{ secrets.GHCR_READ_PAT }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          envs: PORT_FRONTEND,PORT_BACKEND,PORT_AI,MYSQL_ROOT_PASSWORD,MYSQL_DATABASE,MYSQL_USER,MYSQL_PASSWORD,CLICKHOUSE_DB,CLICKHOUSE_USER,CLICKHOUSE_PASSWORD,JWT_SECRET,SPRING_DATASOURCE_URL,SPRING_DATASOURCE_USERNAME,SPRING_DATASOURCE_PASSWORD,GHCR_USERNAME,GHCR_READ_PAT
+          script: |
+            cd /opt/landom-deploy
+            echo "$GHCR_READ_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+            chmod +x scripts/env.sh scripts/deploy.sh
+            ./scripts/deploy.sh prod
