@@ -2,3 +2,6 @@ services:
   backend:
     environment:
       SPRING_PROFILES_ACTIVE: dev
+  llm:
+    ports:
+      - "${PORT_LLM}:8000"
