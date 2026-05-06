@@ -20,6 +20,14 @@ services:
     networks:
       - landom-net
 
+  llm:
+    image: ghcr.io/dontyouknowfunnel/landom-llm:${LLM_TAG}
+    restart: always
+    env_file:
+      - .env.runtime
+    networks:
+      - landom-net
+
   mysql:
     image: mysql:8.4
     restart: always
