@@ -18,7 +18,7 @@ services:
       - mysql
       - clickhouse
     volumes:
-      - ./init-db:/app/init-db:ro
+      - ./init-db:/backend/init-db:ro
     networks:
       - landom-net
 
