@@ -42,6 +42,7 @@ BACKEND_BASE_URL=${SERVER_URL}
 
 CLICKHOUSE_HOST=clickhouse
 CLICKHOUSE_PORT=8123
+CLICKHOUSE_SCHEMA_PATH=file:/backend/init-db/init-clickhouse.sql
 
 EOF
 
