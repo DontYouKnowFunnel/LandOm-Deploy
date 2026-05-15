@@ -17,6 +17,8 @@ services:
     depends_on:
       - mysql
       - clickhouse
+    volumes:
+      - ./init-db:/app/init-db:ro
     networks:
       - landom-net
 
