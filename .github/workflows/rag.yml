@@ -22,13 +22,6 @@ jobs:
     environment: ${{ github.event.inputs.target_env }}
 
     steps:
-      - name: Validate confirmation
-        run: |
-          if [ "${{ github.event.inputs.confirm_recreate }}" != "RECREATE" ]; then
-            echo "confirm_recreate must be RECREATE"
-            exit 1
-          fi
-
       - name: Checkout deploy repo
         uses: actions/checkout@v4
 
