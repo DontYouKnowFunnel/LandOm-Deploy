@@ -81,5 +81,5 @@ jobs:
           script: |
             cd /opt/landom-deploy
             echo "$GHCR_READ_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
-            chmod +x scripts/env.sh scripts/recreate_rag.sh
-            ./scripts/recreate_rag.sh "${{ github.event.inputs.target_env }}"
+            chmod +x scripts/env.sh scripts/rag.sh
+            ./scripts/rag.sh "${{ github.event.inputs.target_env }}"
