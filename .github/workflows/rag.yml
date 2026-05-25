@@ -1,0 +1,92 @@
+name: Recreate RAG Vector DB
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: "Target environment"
+        required: true
+        default: "dev"
+        type: choice
+        options:
+          - dev
+          - prod
+
+concurrency:
+  group: landom-rag-${{ github.event.inputs.target_env }}
+  cancel-in-progress: false
+
+jobs:
+  recreate-rag:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.target_env }}
+
+    steps:
+      - name: Validate confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirm_recreate }}" != "RECREATE" ]; then
+            echo "confirm_recreate must be RECREATE"
+            exit 1
+          fi
+
+      - name: Checkout deploy repo
+        uses: actions/checkout@v4
+
+      - name: Copy files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          source: "."
+          target: "/opt/landom-deploy"
+
+      - name: Recreate RAG on server
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          PORT_FRONTEND: ${{ secrets.PORT_FRONTEND }}
+          PORT_BACKEND: ${{ secrets.PORT_BACKEND }}
+          PORT_LLM: ${{ secrets.PORT_LLM }}
+
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+
+          CLICKHOUSE_DB: ${{ secrets.CLICKHOUSE_DB }}
+          CLICKHOUSE_USER: ${{ secrets.CLICKHOUSE_USER }}
+          CLICKHOUSE_PASSWORD: ${{ secrets.CLICKHOUSE_PASSWORD }}
+
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+          SPRING_DATASOURCE_URL: ${{ secrets.SPRING_DATASOURCE_URL }}
+          SPRING_DATASOURCE_USERNAME: ${{ secrets.SPRING_DATASOURCE_USERNAME }}
+          SPRING_DATASOURCE_PASSWORD: ${{ secrets.SPRING_DATASOURCE_PASSWORD }}
+
+          SERVER_URL: ${{ secrets.SERVER_URL }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          LLM_SERVER_URL: ${{ secrets.LLM_SERVER_URL }}
+
+          LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL }}
+          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
+
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+
+          QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
+
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+          GHCR_READ_PAT: ${{ secrets.GHCR_READ_PAT }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          envs: PORT_FRONTEND,PORT_BACKEND,PORT_LLM,MYSQL_ROOT_PASSWORD,MYSQL_DATABASE,MYSQL_USER,MYSQL_PASSWORD,CLICKHOUSE_DB,CLICKHOUSE_USER,CLICKHOUSE_PASSWORD,JWT_SECRET,SPRING_DATASOURCE_URL,SPRING_DATASOURCE_USERNAME,SPRING_DATASOURCE_PASSWORD,SERVER_URL,FRONTEND_URL,LLM_SERVER_URL,LLM_PROVIDER,LLM_MODEL,LLM_BASE_URL,OPENAI_API_KEY,GROQ_API_KEY,QDRANT_API_KEY,GHCR_USERNAME,GHCR_READ_PAT
+          script: |
+            cd /opt/landom-deploy
+            echo "$GHCR_READ_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+            chmod +x scripts/env.sh scripts/recreate_rag.sh
+            ./scripts/recreate_rag.sh "${{ github.event.inputs.target_env }}"
