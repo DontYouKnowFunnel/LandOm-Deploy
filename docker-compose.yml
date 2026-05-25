@@ -48,9 +48,22 @@ services:
     networks:
       - landom-net
 
+  qdrant:
+    image: qdrant/qdrant:v1.18.1
+    restart: always
+    env_file:
+      - .env.runtime
+    volumes:
+      - qdrant-data:/qdrant/storage
+    expose:
+      - "6333"
+    networks:
+      - landom-net
+
 networks:
   landom-net:
 
 volumes:
   mysql-data:
   clickhouse-data:
+  qdrant-data:
