@@ -34,6 +34,5 @@ docker compose \
   -f "$COMPOSE_FILE" \
   run --rm --no-deps llm \
   sh -lc "
-    python scripts/build_rag_vector_db.py --recreate &&
-    python scripts/query_rag_vector_db.py
+    python scripts/build_rag_vector_db.py --recreate
   "
